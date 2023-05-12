@@ -1,0 +1,65 @@
+from pyquil import Program, get_qc
+from pyquil.gates import H, X, Z, MEASURE
+from pyquil.api import WavefunctionSimulator
+
+# Definir una lista de elementos
+elements = ['apple', 'banana', 'cherry', 'date', 'elderberry']
+
+# Definir la función de búsqueda
+def grover_search(elements, search_element):
+    # Calcular el número de qubits necesarios
+    num_qubits = len(elements).bit_length()
+    
+    # Crear un programa cuántico
+    p = Program()
+    
+    # Crear los qubits
+    qubits = p.alloc_qureg(num_qubits)
+    
+    # Aplicar la compuerta Hadamard a todos los qubits
+    p.inst(H(qubit) for qubit in qubits)
+    
+    # Definir el oráculo
+    oracle = Program()
+    for i, element in enumerate(elements):
+        if element == search_element:
+            # Aplicar la compuerta Z al primer qubit si el elemento se encuentra en la lista
+            oracle.inst(Z(qubits[0]))
+        else:
+            # Aplicar la compuerta X seguida de la compuerta Z a todos los qubits si el elemento no se encuentra en la lista
+            oracle.inst(X(qubit) for qubit in qubits)
+            oracle.inst(Z(qubits[0]))
+            oracle.inst(X(qubit) for qubit in qubits)
+    
+    # Aplicar el oráculo
+    p += oracle
+    
+    # Aplicar la difusión de Grover
+    diffuser = Program()
+    diffuser.defgate("DIFFUSER", diffuser_matrix(num_qubits))
+    diffuser.inst(("DIFFUSER",) + tuple(qubits))
+    
+    # Repetir la aplicación del oráculo y la difusión de Grover varias veces
+    num_iterations = int(round((np.pi/4) * np.sqrt(len(elements))))
+    for i in range(num_iterations):
+        p += oracle
+        p += diffuser
+    
+    # Medir los qubits
+    p += [MEASURE(qubit, i) for i, qubit in enumerate(qubits)]
+    
+    # Ejecutar el programa en un simulador cuántico
+    wf_sim = WavefunctionSimulator()
+    wf = wf_sim.wavefunction(p)
+    
+    # Devolver el estado final de los qubits
+    return wf
+
+# Definir el elemento a buscar
+search_element = 'date'
+
+# Ejecutar la búsqueda
+result = grover_search(elements, search_element)
+
+# Imprimir el estado final de los qubits
+print(result)
